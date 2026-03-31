@@ -1,4 +1,6 @@
 fastapi
-python-multipart
+uvicorn
 supabase
-
+python-dotenv
+flask
+flask-cors
