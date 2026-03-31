@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 WORKDIR /app
 
@@ -7,6 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE $PORT
-
-CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD ["gunicorn", "api.index:app", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:10000"]
