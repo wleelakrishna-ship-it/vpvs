@@ -2,11 +2,14 @@ import os
 from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import uuid4
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from supabase import Client, create_client
+
+load_dotenv()
 
 app = FastAPI(title="Anti Gravity API")
 
