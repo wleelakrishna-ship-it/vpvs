@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { sha256 } from "crypto-js/sha256";
+import CryptoJS from "crypto-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = "sb_secret_NeuEJonW2p8YGGyv1551Yg_Ge-BHrXH";
@@ -25,7 +25,7 @@ export async function directSignup(userData) {
     }
     
     // Hash password
-    const hashedPassword = sha256(password).toString();
+    const hashedPassword = CryptoJS.SHA256(password).toString();
     
     // Insert user directly into Supabase
     const { data, error } = await supabaseAdmin
@@ -70,7 +70,7 @@ export async function directLogin(username, password) {
     }
     
     // Hash password
-    const hashedPassword = sha256(password).toString();
+    const hashedPassword = CryptoJS.SHA256(password).toString();
     
     // Find user
     const { data, error } = await supabaseAdmin
