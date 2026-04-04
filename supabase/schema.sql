@@ -34,7 +34,19 @@ create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   username text not null unique,
   email text not null unique,
+  password text not null,
+  phone text not null,
+  dob date not null,
   is_admin boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  description text not null,
+  amount numeric not null check (amount >= 0),
+  type text not null check (type in ('debit', 'credit')),
+  date date not null,
   created_at timestamptz not null default now()
 );
 
@@ -43,12 +55,16 @@ create index if not exists posts_created_at_idx on public.posts (created_at desc
 create index if not exists comments_post_id_created_at_idx on public.comments (post_id, created_at asc);
 create index if not exists likes_post_id_idx on public.likes (post_id);
 create index if not exists profiles_username_idx on public.profiles (username);
+create index if not exists profiles_email_idx on public.profiles (email);
+create index if not exists expenses_date_idx on public.expenses (date desc);
+create index if not exists expenses_type_idx on public.expenses (type);
 
 -- Row Level Security
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
 alter table public.likes enable row level security;
 alter table public.profiles enable row level security;
+alter table public.expenses enable row level security;
 
 -- POSTS:
 -- - Anyone can read posts (anon/public).
@@ -124,6 +140,30 @@ to public
 with check (
   char_length(username) between 1 and 32
   and char_length(email) between 5 and 100
+  and char_length(password) >= 6
+  and char_length(phone) = 10
+  and dob <= current_date
+);
+
+-- EXPENSES:
+-- - Anyone can read expenses.
+-- - Anyone can add expenses.
+drop policy if exists "expenses_select_public" on public.expenses;
+create policy "expenses_select_public"
+on public.expenses
+for select
+to public
+using (true);
+
+drop policy if exists "expenses_insert_public" on public.expenses;
+create policy "expenses_insert_public"
+on public.expenses
+for insert
+to public
+with check (
+  char_length(description) between 1 and 200
+  and amount >= 0
+  and type in ('debit', 'credit')
 );
 
 -- Optional hardening:

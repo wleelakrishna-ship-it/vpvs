@@ -248,23 +248,48 @@ def signup(payload: Dict[str, Any]):
     try:
         username = str(payload.get("username") or "").strip()
         email = str(payload.get("email") or "").strip()
+        password = str(payload.get("password") or "").strip()
+        phone = str(payload.get("phone") or "").strip()
+        dob = str(payload.get("dob") or "").strip()
         is_admin = bool(payload.get("is_admin", False))
 
         if not username:
             return _safe_error("Missing username", 400)
         if not email:
             return _safe_error("Missing email", 400)
+        if not password:
+            return _safe_error("Missing password", 400)
+        if not phone:
+            return _safe_error("Missing phone", 400)
+        if not dob:
+            return _safe_error("Missing date of birth", 400)
         if len(username) > 32:
             return _safe_error("Username too long", 400)
         if len(email) > 100:
             return _safe_error("Email too long", 400)
+        if len(password) < 6:
+            return _safe_error("Password must be at least 6 characters", 400)
+        if len(phone) != 10 or not phone.isdigit():
+            return _safe_error("Phone must be 10 digits", 400)
         if "@" not in email:
             return _safe_error("Invalid email format", 400)
+
+        # Note: In production, you should hash the password before storing
+        # For demo purposes, storing as-is (NOT RECOMMENDED FOR PRODUCTION)
+        from hashlib import sha256
+        hashed_password = sha256(password.encode()).hexdigest()
 
         sb = get_admin_client()
         res = (
             sb.table("profiles")
-            .insert({"username": username, "email": email, "is_admin": is_admin})
+            .insert({
+                "username": username, 
+                "email": email, 
+                "password": hashed_password,
+                "phone": phone,
+                "dob": dob,
+                "is_admin": is_admin
+            })
             .execute()
         )
         saved = (res.data or [{}])[0]
@@ -401,6 +426,79 @@ def get_post_with_stats(post_id: str):
                 "comments_count": len(comments_res.data or [])
             },
             "comments": comments_res.data or []
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/expenses")
+def get_expenses(view: str = "day"):
+    try:
+        sb = get_admin_client()
+        
+        # Calculate date range based on view mode
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        
+        if view == "day":
+            start_date = today
+        elif view == "month":
+            start_date = today.replace(day=1)
+        elif view == "year":
+            start_date = today.replace(month=1, day=1)
+        else:
+            start_date = today
+        
+        res = (
+            sb.table("expenses")
+            .select("id,description,amount,type,date,created_at")
+            .gte("date", start_date.isoformat())
+            .order("date", desc=True)
+            .execute()
+        )
+        return {"expenses": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.post("/api/expenses")
+def add_expense(payload: Dict[str, Any]):
+    try:
+        description = str(payload.get("description") or "").strip()
+        amount = float(payload.get("amount") or 0)
+        expense_type = str(payload.get("type") or "").strip()
+        date = str(payload.get("date") or "").strip()
+
+        if not description:
+            return _safe_error("Missing description", 400)
+        if amount <= 0:
+            return _safe_error("Amount must be greater than 0", 400)
+        if expense_type not in ["debit", "credit"]:
+            return _safe_error("Type must be debit or credit", 400)
+        if not date:
+            return _safe_error("Missing date", 400)
+
+        sb = get_admin_client()
+        res = (
+            sb.table("expenses")
+            .insert({
+                "description": description,
+                "amount": amount,
+                "type": expense_type,
+                "date": date
+            })
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "expense": {
+                "id": saved.get("id"),
+                "description": saved.get("description", description),
+                "amount": saved.get("amount", amount),
+                "type": saved.get("type", expense_type),
+                "date": saved.get("date", date),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
         }
     except Exception as exc:
         return _safe_error(str(exc))
