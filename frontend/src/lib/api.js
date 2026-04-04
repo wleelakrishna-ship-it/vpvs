@@ -80,3 +80,34 @@ export async function addComment({ postId, username, comment }) {
   return json.comment;
 }
 
+export async function getLikes(postId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/likes?postId=${encodeURIComponent(postId)}`,
+  );
+  const json = await expectJson(res);
+  if (!res.ok) throw new Error(json?.error || "Failed to fetch likes");
+  return json.likes || [];
+}
+
+export async function addLike({ postId, username }) {
+  const res = await fetch(`${API_BASE_URL}/api/likes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ postId, username }),
+  });
+  const json = await expectJson(res);
+  if (!res.ok) throw new Error(json?.error || "Failed to add like");
+  return json.like;
+}
+
+export async function removeLike({ postId, username }) {
+  const res = await fetch(`${API_BASE_URL}/api/likes`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ postId, username }),
+  });
+  const json = await expectJson(res);
+  if (!res.ok) throw new Error(json?.error || "Failed to remove like");
+  return json;
+}
+
