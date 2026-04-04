@@ -1,5 +1,5 @@
--- COMPLETE WORKING SCHEMA - Run this in Supabase SQL Editor
--- This will fix ALL signup/login issues
+-- WORKING SCHEMA - Copy and paste this into Supabase SQL Editor
+-- This will fix the signup/login issues
 
 -- Step 1: Drop all tables to start fresh
 DROP TABLE IF EXISTS public.expenses CASCADE;
@@ -163,3 +163,14 @@ create policy "expenses_delete_admin" on public.expenses for delete to public us
   )
   or user_id = auth.uid()
 );
+
+-- Step 6: Test data (optional)
+-- You can run this to create a test admin user:
+INSERT INTO public.profiles (username, email, password, phone, dob, is_admin) 
+VALUES ('admin', 'admin@test.com', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', '1234567890', '2000-01-01', true);
+
+-- This creates a test regular user:
+INSERT INTO public.profiles (username, email, password, phone, dob, is_admin) 
+VALUES ('user', 'user@test.com', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', '1234567890', '2000-01-01', false);
+
+-- Note: The password hashes above are for 'password123'

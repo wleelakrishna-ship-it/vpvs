@@ -1,19 +1,19 @@
 {
   "functions": {
-    "api/index.py": {
-      "runtime": "python3.11"
+    "api/index.js": {
+      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "destination": "/api/index.js"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.py"
+      "dest": "/api/index.js"
     }
   ]
 }

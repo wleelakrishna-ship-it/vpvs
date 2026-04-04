@@ -4,3 +4,4 @@ gunicorn
 python-dotenv
 supabase
 python-multipart
+pydantic
