@@ -7,4 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["gunicorn", "api.index:app", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:10000"]
+EXPOSE 10000
+
+CMD ["python", "server.py"]
