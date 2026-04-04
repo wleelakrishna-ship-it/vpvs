@@ -242,3 +242,166 @@ def add_comment(payload: Dict[str, Any]):
     except Exception as exc:
         return _safe_error(str(exc))
 
+
+@app.post("/api/profiles/signup")
+def signup(payload: Dict[str, Any]):
+    try:
+        username = str(payload.get("username") or "").strip()
+        email = str(payload.get("email") or "").strip()
+        is_admin = bool(payload.get("is_admin", False))
+
+        if not username:
+            return _safe_error("Missing username", 400)
+        if not email:
+            return _safe_error("Missing email", 400)
+        if len(username) > 32:
+            return _safe_error("Username too long", 400)
+        if len(email) > 100:
+            return _safe_error("Email too long", 400)
+        if "@" not in email:
+            return _safe_error("Invalid email format", 400)
+
+        sb = get_admin_client()
+        res = (
+            sb.table("profiles")
+            .insert({"username": username, "email": email, "is_admin": is_admin})
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "profile": {
+                "id": saved.get("id"),
+                "username": saved.get("username", username),
+                "email": saved.get("email", email),
+                "is_admin": saved.get("is_admin", is_admin),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/profiles/{username}")
+def get_profile(username: str):
+    try:
+        sb = get_admin_client()
+        res = (
+            sb.table("profiles")
+            .select("id,username,email,is_admin,created_at")
+            .eq("username", username)
+            .limit(1)
+            .execute()
+        )
+        if not res.data:
+            return _safe_error("Profile not found", 404)
+        return {"profile": res.data[0]}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/likes")
+def get_likes(postId: str):
+    try:
+        sb = get_admin_client()
+        res = (
+            sb.table("likes")
+            .select("id,post_id,username,created_at")
+            .eq("post_id", postId)
+            .execute()
+        )
+        return {"likes": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.post("/api/likes")
+def add_like(payload: Dict[str, Any]):
+    try:
+        post_id = str(payload.get("postId") or payload.get("post_id") or "").strip()
+        username = str(payload.get("username") or "").strip()
+
+        if not post_id:
+            return _safe_error("Missing postId", 400)
+        if not username:
+            return _safe_error("Missing username", 400)
+        if len(username) > 32:
+            return _safe_error("Username too long", 400)
+
+        sb = get_admin_client()
+        res = (
+            sb.table("likes")
+            .insert({"post_id": post_id, "username": username})
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "like": {
+                "id": saved.get("id"),
+                "post_id": saved.get("post_id", post_id),
+                "username": saved.get("username", username),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.delete("/api/likes")
+def remove_like(payload: Dict[str, Any]):
+    try:
+        post_id = str(payload.get("postId") or payload.get("post_id") or "").strip()
+        username = str(payload.get("username") or "").strip()
+
+        if not post_id:
+            return _safe_error("Missing postId", 400)
+        if not username:
+            return _safe_error("Missing username", 400)
+
+        sb = get_admin_client()
+        sb.table("likes").delete().eq("post_id", post_id).eq("username", username).execute()
+        return {"ok": True}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/posts/{post_id}/with-stats")
+def get_post_with_stats(post_id: str):
+    try:
+        sb = get_admin_client()
+        
+        # Get post
+        post_res = (
+            sb.table("posts")
+            .select("id,title,description,image_url,created_at")
+            .eq("id", post_id)
+            .limit(1)
+            .execute()
+        )
+        if not post_res.data:
+            return _safe_error("Post not found", 404)
+        post = post_res.data[0]
+
+        # Get likes count
+        likes_res = sb.table("likes").select("id").eq("post_id", post_id).execute()
+        likes_count = len(likes_res.data or [])
+
+        # Get comments
+        comments_res = (
+            sb.table("comments")
+            .select("id,post_id,username,comment,created_at")
+            .eq("post_id", post_id)
+            .order("created_at")
+            .execute()
+        )
+
+        return {
+            "post": post,
+            "stats": {
+                "likes_count": likes_count,
+                "comments_count": len(comments_res.data or [])
+            },
+            "comments": comments_res.data or []
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+

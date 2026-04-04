@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage.jsx";
 import PostDetailPage from "./pages/PostDetailPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
+import SignupPage from "./pages/SignupPage.jsx";
 import { AdminAuthProvider } from "./state/AdminAuthContext.jsx";
 import RequireAdmin from "./components/RequireAdmin.jsx";
 
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/post/:id" element={<PostDetailPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route
               path="/admin"
               element={

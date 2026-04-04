@@ -22,13 +22,33 @@ create table if not exists public.comments (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.likes (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  username text not null,
+  created_at timestamptz not null default now(),
+  unique(post_id, username)
+);
+
+create table if not exists public.profiles (
+  id uuid primary key default gen_random_uuid(),
+  username text not null unique,
+  email text not null unique,
+  is_admin boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 -- Indexes
 create index if not exists posts_created_at_idx on public.posts (created_at desc);
 create index if not exists comments_post_id_created_at_idx on public.comments (post_id, created_at asc);
+create index if not exists likes_post_id_idx on public.likes (post_id);
+create index if not exists profiles_username_idx on public.profiles (username);
 
 -- Row Level Security
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
+alter table public.likes enable row level security;
+alter table public.profiles enable row level security;
 
 -- POSTS:
 -- - Anyone can read posts (anon/public).
@@ -58,6 +78,52 @@ to public
 with check (
   char_length(username) between 1 and 32
   and char_length(comment) between 1 and 500
+);
+
+-- LIKES:
+-- - Anyone can read likes.
+-- - Anyone can add/remove likes (anon/public).
+drop policy if exists "likes_select_public" on public.likes;
+create policy "likes_select_public"
+on public.likes
+for select
+to public
+using (true);
+
+drop policy if exists "likes_insert_public" on public.likes;
+create policy "likes_insert_public"
+on public.likes
+for insert
+to public
+with check (
+  char_length(username) between 1 and 32
+);
+
+drop policy if exists "likes_delete_own" on public.likes;
+create policy "likes_delete_own"
+on public.likes
+for delete
+to public
+using (username = auth.jwt() ->> 'username');
+
+-- PROFILES:
+-- - Users can view their own profile.
+-- - Users can insert their own profile (signup).
+drop policy if exists "profiles_select_own" on public.profiles;
+create policy "profiles_select_own"
+on public.profiles
+for select
+to public
+using (email = auth.jwt() ->> 'email');
+
+drop policy if exists "profiles_insert_signup" on public.profiles;
+create policy "profiles_insert_signup"
+on public.profiles
+for insert
+to public
+with check (
+  char_length(username) between 1 and 32
+  and char_length(email) between 5 and 100
 );
 
 -- Optional hardening:

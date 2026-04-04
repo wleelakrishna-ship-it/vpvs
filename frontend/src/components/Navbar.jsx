@@ -26,6 +26,13 @@ export default function Navbar() {
             Dashboard
           </Link>
 
+          <Link
+            className={location.pathname === "/signup" ? "active" : ""}
+            to="/signup"
+          >
+            Sign Up
+          </Link>
+
           {token ? (
             <button className="navButton" type="button" onClick={logout}>
               Logout
