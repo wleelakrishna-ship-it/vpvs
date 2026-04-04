@@ -201,6 +201,168 @@ def get_posts():
     except Exception as e:
         return _safe_response(str(e))
 
+# Create post (admin only)
+@app.post("/api/posts")
+def create_post(payload: Dict[str, Any]):
+    try:
+        print(f"Create post request: {payload}")
+        
+        title = str(payload.get("title", "")).strip()
+        description = str(payload.get("description", "")).strip()
+        image_data = payload.get("image_data", "")
+        image_name = payload.get("image_name", "")
+        
+        if not title or not description:
+            return _safe_response("Title and description required", 400)
+        
+        # For demo, create a simple image URL (in production, you'd upload to Supabase storage)
+        image_url = f"https://via.placeholder.com/400x300.png?text={title.replace(' ', '+')}"
+        
+        sb = get_admin_client()
+        res = sb.table("posts").insert({
+            "title": title,
+            "description": description,
+            "image_url": image_url,
+            "image_path": image_name
+        }).execute()
+        
+        print(f"Post creation response: {res}")
+        
+        if not res.data:
+            return _safe_response("Failed to create post", 500)
+        
+        post_data = res.data[0]
+        return {
+            "post": {
+                "id": post_data.get("id"),
+                "title": post_data.get("title"),
+                "description": post_data.get("description"),
+                "image_url": post_data.get("image_url"),
+                "created_at": post_data.get("created_at")
+            }
+        }
+    except Exception as e:
+        print(f"Create post error: {str(e)}")
+        return _safe_response(f"Failed to create post: {str(e)}", 500)
+
+# Get single post
+@app.get("/api/posts/{post_id}")
+def get_post(post_id: str):
+    try:
+        sb = get_admin_client()
+        res = sb.table("posts").select("*").eq("id", post_id).limit(1).execute()
+        
+        if not res.data:
+            return _safe_response("Post not found", 404)
+        
+        return {"post": res.data[0]}
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Get comments for a post
+@app.get("/api/posts/{post_id}/comments")
+def get_comments(post_id: str):
+    try:
+        sb = get_admin_client()
+        res = sb.table("comments").select("*").eq("post_id", post_id).order("created_at", asc=True).execute()
+        return {"comments": res.data or []}
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Add comment to a post
+@app.post("/api/posts/{post_id}/comments")
+def add_comment(post_id: str, payload: Dict[str, Any]):
+    try:
+        username = str(payload.get("username", "")).strip()
+        comment = str(payload.get("comment", "")).strip()
+        
+        if not username or not comment:
+            return _safe_response("Username and comment required", 400)
+        if len(username) > 32 or len(comment) > 500:
+            return _safe_response("Input too long", 400)
+        
+        sb = get_admin_client()
+        res = sb.table("comments").insert({
+            "post_id": post_id,
+            "username": username,
+            "comment": comment
+        }).execute()
+        
+        if not res.data:
+            return _safe_response("Failed to create comment", 500)
+        
+        comment_data = res.data[0]
+        return {
+            "comment": {
+                "id": comment_data.get("id"),
+                "post_id": comment_data.get("post_id", post_id),
+                "username": comment_data.get("username", username),
+                "comment": comment_data.get("comment", comment),
+                "created_at": comment_data.get("created_at", datetime.utcnow().isoformat())
+            }
+        }
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Get likes for a post
+@app.get("/api/posts/{post_id}/likes")
+def get_likes(post_id: str):
+    try:
+        sb = get_admin_client()
+        res = sb.table("likes").select("username").eq("post_id", post_id).execute()
+        likes = [like["username"] for like in (res.data or [])]
+        return {"likes": likes}
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Like a post
+@app.post("/api/posts/{post_id}/likes")
+def add_like(post_id: str, payload: Dict[str, Any]):
+    try:
+        username = str(payload.get("username", "")).strip()
+        
+        if not username or len(username) > 32:
+            return _safe_response("Invalid username", 400)
+        
+        sb = get_admin_client()
+        res = sb.table("likes").insert({
+            "post_id": post_id,
+            "username": username
+        }).execute()
+        
+        if not res.data:
+            return _safe_response("Failed to like post", 500)
+        
+        like_data = res.data[0]
+        return {
+            "like": {
+                "id": like_data.get("id"),
+                "post_id": like_data.get("post_id", post_id),
+                "username": like_data.get("username", username),
+                "created_at": like_data.get("created_at", datetime.utcnow().isoformat())
+            }
+        }
+    except Exception as e:
+        if "duplicate" in str(e).lower():
+            return _safe_response("Already liked", 409)
+        return _safe_response(str(e))
+
+# Remove like from a post
+@app.delete("/api/posts/{post_id}/likes")
+def remove_like(post_id: str, payload: Dict[str, Any]):
+    try:
+        username = str(payload.get("username", "")).strip()
+        
+        if not username:
+            return _safe_response("Username required", 400)
+        
+        sb = get_admin_client()
+        res = sb.table("likes").delete().eq("post_id", post_id).eq("username", username).execute()
+        
+        return {"success": True}
+    except Exception as e:
+        return _safe_response(str(e))
+
 # For Render deployment
 if __name__ == "__main__":
     import uvicorn
