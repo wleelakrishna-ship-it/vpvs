@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { directLogin } from "../lib/directSignup.js";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -24,26 +25,18 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const result = await directLogin(formData.username, formData.password);
 
-      const data = await response.json();
+      // Store user data and token
+      localStorage.setItem("authToken", result.token);
+      localStorage.setItem("currentUser", JSON.stringify(result.user));
 
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+      // Redirect based on user role
+      if (result.user.is_admin) {
+        navigate("/admin");
+      } else {
+        navigate("/expenses");
       }
-
-      // Store auth token and user info
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("currentUser", JSON.stringify(data.user));
-
-      // Redirect to expenses page
-      navigate("/expenses");
     } catch (err) {
       setError(err.message);
     } finally {

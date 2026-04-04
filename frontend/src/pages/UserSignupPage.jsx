@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { directSignup } from "../lib/directSignup.js";
 
 export default function UserSignupPage() {
   const [formData, setFormData] = useState({
@@ -27,25 +28,17 @@ export default function UserSignupPage() {
     setError("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profiles/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          is_admin: false,
-        }),
+      const result = await directSignup({
+        ...formData,
+        is_admin: false,
       });
 
-      const data = await response.json();
+      // Store user data and token
+      localStorage.setItem("authToken", result.token);
+      localStorage.setItem("currentUser", JSON.stringify(result.user));
 
-      if (!response.ok) {
-        throw new Error(data.error || "User signup failed");
-      }
-
-      // Redirect to home page after successful signup
-      navigate("/");
+      // Redirect to expenses page
+      navigate("/expenses");
     } catch (err) {
       setError(err.message);
     } finally {

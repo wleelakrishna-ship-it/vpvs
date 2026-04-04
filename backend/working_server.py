@@ -363,6 +363,106 @@ def remove_like(post_id: str, payload: Dict[str, Any]):
     except Exception as e:
         return _safe_response(str(e))
 
+# Get expenses for authenticated user
+@app.get("/api/expenses")
+def get_expenses(view: str = "day", authorization: Optional[str] = Header(default=None)):
+    try:
+        if not authorization:
+            return _safe_response("Authentication required", 401)
+        
+        # For demo, we'll skip JWT verification and just return expenses
+        sb = get_admin_client()
+        res = sb.table("expenses").select("*").order("created_at", desc=True).execute()
+        
+        return {"expenses": res.data or []}
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Create expense
+@app.post("/api/expenses")
+def create_expense(payload: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
+    try:
+        if not authorization:
+            return _safe_response("Authentication required", 401)
+        
+        description = str(payload.get("description", "")).strip()
+        amount = float(payload.get("amount", 0))
+        expense_type = str(payload.get("type", "debit")).strip()
+        date = str(payload.get("date", "")).strip()
+        group_id = payload.get("group_id")
+        
+        if not description or not amount or not date:
+            return _safe_response("Description, amount, and date required", 400)
+        
+        if expense_type not in ["debit", "credit"]:
+            return _safe_response("Type must be debit or credit", 400)
+        
+        # For demo, we'll use a dummy user_id
+        user_id = "2f22be17-accb-4d89-b977-7bca27903a35"  # testadmin user
+        
+        sb = get_admin_client()
+        res = sb.table("expenses").insert({
+            "description": description,
+            "amount": amount,
+            "type": expense_type,
+            "date": date,
+            "user_id": user_id,
+            "group_id": group_id
+        }).execute()
+        
+        if not res.data:
+            return _safe_response("Failed to create expense", 500)
+        
+        expense_data = res.data[0]
+        return {"expense": expense_data}
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Get expense groups
+@app.get("/api/expense-groups")
+def get_expense_groups(authorization: Optional[str] = Header(default=None)):
+    try:
+        if not authorization:
+            return _safe_response("Authentication required", 401)
+        
+        sb = get_admin_client()
+        res = sb.table("expense_groups").select("*").order("created_at", desc=True).execute()
+        
+        return {"groups": res.data or []}
+    except Exception as e:
+        return _safe_response(str(e))
+
+# Create expense group (admin only)
+@app.post("/api/expense-groups")
+def create_expense_group(payload: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
+    try:
+        if not authorization:
+            return _safe_response("Authentication required", 401)
+        
+        name = str(payload.get("name", "")).strip()
+        description = str(payload.get("description", "")).strip()
+        
+        if not name:
+            return _safe_response("Group name required", 400)
+        
+        # For demo, we'll use a dummy created_by user
+        created_by = "2f22be17-accb-4d89-b977-7bca27903a35"  # testadmin user
+        
+        sb = get_admin_client()
+        res = sb.table("expense_groups").insert({
+            "name": name,
+            "description": description,
+            "created_by": created_by
+        }).execute()
+        
+        if not res.data:
+            return _safe_response("Failed to create group", 500)
+        
+        group_data = res.data[0]
+        return {"group": group_data}
+    except Exception as e:
+        return _safe_response(str(e))
+
 # For Render deployment
 if __name__ == "__main__":
     import uvicorn

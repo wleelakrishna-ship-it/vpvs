@@ -4,7 +4,7 @@ import Navbar from "./components/Navbar.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import PostDetailPage from "./pages/PostDetailPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
-import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
 import AdminSignupPage from "./pages/AdminSignupPage.jsx";
 import UserSignupPage from "./pages/UserSignupPage.jsx";
@@ -32,7 +32,7 @@ export default function App() {
               path="/admin"
               element={
                 <RequireAdmin>
-                  <AdminDashboard />
+                  <AdminDashboardPage />
                 </RequireAdmin>
               }
             />
