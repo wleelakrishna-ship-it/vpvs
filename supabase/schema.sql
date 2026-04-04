@@ -41,12 +41,22 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.expense_groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text,
+  created_by uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   description text not null,
   amount numeric not null check (amount >= 0),
   type text not null check (type in ('debit', 'credit')),
   date date not null,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  group_id uuid references public.expense_groups(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -58,12 +68,16 @@ create index if not exists profiles_username_idx on public.profiles (username);
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists expenses_date_idx on public.expenses (date desc);
 create index if not exists expenses_type_idx on public.expenses (type);
+create index if not exists expenses_user_id_idx on public.expenses (user_id);
+create index if not exists expenses_group_id_idx on public.expenses (group_id);
+create index if not exists expense_groups_created_by_idx on public.expense_groups (created_by);
 
 -- Row Level Security
 alter table public.posts enable row level security;
 alter table public.comments enable row level security;
 alter table public.likes enable row level security;
 alter table public.profiles enable row level security;
+alter table public.expense_groups enable row level security;
 alter table public.expenses enable row level security;
 
 -- POSTS:
@@ -145,18 +159,53 @@ with check (
   and dob <= current_date
 );
 
--- EXPENSES:
--- - Anyone can read expenses.
--- - Anyone can add expenses.
-drop policy if exists "expenses_select_public" on public.expenses;
-create policy "expenses_select_public"
-on public.expenses
+-- EXPENSE_GROUPS:
+-- - Admins can create groups.
+-- - Anyone can read groups.
+drop policy if exists "expense_groups_select_public" on public.expense_groups;
+create policy "expense_groups_select_public"
+on public.expense_groups
 for select
 to public
 using (true);
 
-drop policy if exists "expenses_insert_public" on public.expenses;
-create policy "expenses_insert_public"
+drop policy if exists "expense_groups_insert_admin" on public.expense_groups;
+create policy "expense_groups_insert_admin"
+on public.expense_groups
+for insert
+to public
+with check (
+  exists (
+    select 1 from public.profiles 
+    where profiles.id = auth.uid() 
+    and profiles.is_admin = true
+  )
+);
+
+-- EXPENSES:
+-- - Users can view their own expenses and group expenses.
+-- - Users can add their own expenses.
+-- - Admins can add/edit/delete any expense.
+drop policy if exists "expenses_select_user" on public.expenses;
+create policy "expenses_select_user"
+on public.expenses
+for select
+to public
+using (
+  user_id = auth.uid() 
+  or exists (
+    select 1 from public.profiles 
+    where profiles.id = auth.uid() 
+    and profiles.is_admin = true
+  )
+  or group_id in (
+    select id from public.expense_groups 
+    where created_by = auth.uid()
+  )
+);
+
+drop policy if exists "expenses_insert_user" on public.expenses;
+create policy "expenses_insert_user"
 on public.expenses
 for insert
 to public
@@ -164,6 +213,39 @@ with check (
   char_length(description) between 1 and 200
   and amount >= 0
   and type in ('debit', 'credit')
+  and user_id = auth.uid()
+);
+
+drop policy if exists "expenses_update_admin" on public.expenses;
+create policy "expenses_update_admin"
+on public.expenses
+for update
+to public
+using (
+  exists (
+    select 1 from public.profiles 
+    where profiles.id = auth.uid() 
+    and profiles.is_admin = true
+  )
+)
+with check (
+  char_length(description) between 1 and 200
+  and amount >= 0
+  and type in ('debit', 'credit')
+);
+
+drop policy if exists "expenses_delete_admin" on public.expenses;
+create policy "expenses_delete_admin"
+on public.expenses
+for delete
+to public
+using (
+  exists (
+    select 1 from public.profiles 
+    where profiles.id = auth.uid() 
+    and profiles.is_admin = true
+  )
+  or user_id = auth.uid()
 );
 
 -- Optional hardening:

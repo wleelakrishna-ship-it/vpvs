@@ -9,6 +9,7 @@ import SignupPage from "./pages/SignupPage.jsx";
 import AdminSignupPage from "./pages/AdminSignupPage.jsx";
 import UserSignupPage from "./pages/UserSignupPage.jsx";
 import ExpensesPage from "./pages/ExpensesPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
 import { AdminAuthProvider } from "./state/AdminAuthContext.jsx";
 import RequireAdmin from "./components/RequireAdmin.jsx";
 
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/post/:id" element={<PostDetailPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/admin-signup" element={<AdminSignupPage />} />
             <Route path="/user-signup" element={<UserSignupPage />} />

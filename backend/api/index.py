@@ -11,7 +11,7 @@ from supabase import Client, create_client
 
 load_dotenv()
 
-app = FastAPI(title="Anti Gravity API")
+app = FastAPI(title="VPVS API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,7 +62,22 @@ def require_admin(authorization: Optional[str]) -> Dict[str, Any]:
     if not is_admin:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
-    return {"id": getattr(user, "id", None)}
+    return {"id": getattr(user, "id", None), "token": token}
+
+
+def get_current_user(authorization: Optional[str]) -> Dict[str, Any]:
+    if not authorization:
+        return None
+    try:
+        token = _extract_token(authorization)
+        client = get_anon_client()
+        user_resp = client.auth.get_user(token)
+        user = getattr(user_resp, "user", None)
+        if not user:
+            return None
+        return {"id": getattr(user, "id", None), "token": token}
+    except:
+        return None
 
 
 def _safe_error(message: str, status_code: int = 500) -> JSONResponse:
@@ -431,9 +446,65 @@ def get_post_with_stats(post_id: str):
         return _safe_error(str(exc))
 
 
-@app.get("/api/expenses")
-def get_expenses(view: str = "day"):
+@app.post("/api/auth/login")
+def login(payload: Dict[str, Any]):
     try:
+        username = str(payload.get("username") or "").strip()
+        password = str(payload.get("password") or "").strip()
+
+        if not username or not password:
+            return _safe_error("Missing username or password", 400)
+
+        # Hash the password to compare with stored hash
+        from hashlib import sha256
+        hashed_password = sha256(password.encode()).hexdigest()
+
+        sb = get_admin_client()
+        res = (
+            sb.table("profiles")
+            .select("id,username,email,is_admin,password")
+            .eq("username", username)
+            .limit(1)
+            .execute()
+        )
+
+        if not res.data:
+            return _safe_error("Invalid credentials", 401)
+
+        profile = res.data[0]
+        if profile.get("password") != hashed_password:
+            return _safe_error("Invalid credentials", 401)
+
+        # Create JWT token using Supabase auth
+        client = get_anon_client()
+        auth_resp = client.auth.sign_in_with_password({
+            "email": profile.get("email"),
+            "password": password
+        })
+
+        if hasattr(auth_resp, 'error') and auth_resp.error:
+            return _safe_error("Login failed", 401)
+
+        return {
+            "user": {
+                "id": profile.get("id"),
+                "username": profile.get("username"),
+                "email": profile.get("email"),
+                "is_admin": profile.get("is_admin", False)
+            },
+            "token": auth_resp.session.access_token
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/expenses")
+def get_expenses(view: str = "day", authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+
         sb = get_admin_client()
         
         # Calculate date range based on view mode
@@ -449,10 +520,12 @@ def get_expenses(view: str = "day"):
         else:
             start_date = today
         
+        # Get user's expenses and group expenses
         res = (
             sb.table("expenses")
-            .select("id,description,amount,type,date,created_at")
+            .select("id,description,amount,type,date,user_id,group_id,created_at")
             .gte("date", start_date.isoformat())
+            .or_(f"user_id.eq.{current_user['id']},group_id.in.(select(id from expense_groups where created_by=eq.{current_user['id']}))")
             .order("date", desc=True)
             .execute()
         )
@@ -462,12 +535,17 @@ def get_expenses(view: str = "day"):
 
 
 @app.post("/api/expenses")
-def add_expense(payload: Dict[str, Any]):
+def add_expense(payload: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
     try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+
         description = str(payload.get("description") or "").strip()
         amount = float(payload.get("amount") or 0)
         expense_type = str(payload.get("type") or "").strip()
         date = str(payload.get("date") or "").strip()
+        group_id = payload.get("group_id")
 
         if not description:
             return _safe_error("Missing description", 400)
@@ -485,7 +563,9 @@ def add_expense(payload: Dict[str, Any]):
                 "description": description,
                 "amount": amount,
                 "type": expense_type,
-                "date": date
+                "date": date,
+                "user_id": current_user["id"],
+                "group_id": group_id
             })
             .execute()
         )
@@ -497,6 +577,168 @@ def add_expense(payload: Dict[str, Any]):
                 "amount": saved.get("amount", amount),
                 "type": saved.get("type", expense_type),
                 "date": saved.get("date", date),
+                "user_id": saved.get("user_id", current_user["id"]),
+                "group_id": saved.get("group_id", group_id),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.put("/api/expenses/{expense_id}")
+def update_expense(expense_id: str, payload: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+
+        # Check if user is admin or expense owner
+        sb = get_admin_client()
+        expense_res = (
+            sb.table("expenses")
+            .select("id,user_id")
+            .eq("id", expense_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not expense_res.data:
+            return _safe_error("Expense not found", 404)
+
+        expense = expense_res.data[0]
+        is_admin = current_user.get("is_admin", False)
+        is_owner = expense.get("user_id") == current_user["id"]
+
+        if not (is_admin or is_owner):
+            return _safe_error("Permission denied", 403)
+
+        description = str(payload.get("description") or "").strip()
+        amount = float(payload.get("amount") or 0)
+        expense_type = str(payload.get("type") or "").strip()
+        date = str(payload.get("date") or "").strip()
+        group_id = payload.get("group_id")
+
+        if not description:
+            return _safe_error("Missing description", 400)
+        if amount <= 0:
+            return _safe_error("Amount must be greater than 0", 400)
+        if expense_type not in ["debit", "credit"]:
+            return _safe_error("Type must be debit or credit", 400)
+        if not date:
+            return _safe_error("Missing date", 400)
+
+        res = (
+            sb.table("expenses")
+            .update({
+                "description": description,
+                "amount": amount,
+                "type": expense_type,
+                "date": date,
+                "group_id": group_id
+            })
+            .eq("id", expense_id)
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "expense": {
+                "id": saved.get("id", expense_id),
+                "description": saved.get("description", description),
+                "amount": saved.get("amount", amount),
+                "type": saved.get("type", expense_type),
+                "date": saved.get("date", date),
+                "group_id": saved.get("group_id", group_id),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.delete("/api/expenses/{expense_id}")
+def delete_expense(expense_id: str, authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+
+        # Check if user is admin or expense owner
+        sb = get_admin_client()
+        expense_res = (
+            sb.table("expenses")
+            .select("id,user_id")
+            .eq("id", expense_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not expense_res.data:
+            return _safe_error("Expense not found", 404)
+
+        expense = expense_res.data[0]
+        is_admin = current_user.get("is_admin", False)
+        is_owner = expense.get("user_id") == current_user["id"]
+
+        if not (is_admin or is_owner):
+            return _safe_error("Permission denied", 403)
+
+        sb.table("expenses").delete().eq("id", expense_id).execute()
+        return {"ok": True}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/expense-groups")
+def get_expense_groups(authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+
+        sb = get_admin_client()
+        res = (
+            sb.table("expense_groups")
+            .select("*")
+            .eq("created_by", current_user["id"])
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return {"groups": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.post("/api/expense-groups")
+def create_expense_group(payload: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user or not current_user.get("is_admin", False):
+            return _safe_error("Admin privileges required", 403)
+
+        name = str(payload.get("name") or "").strip()
+        description = str(payload.get("description") or "").strip()
+
+        if not name:
+            return _safe_error("Missing group name", 400)
+
+        sb = get_admin_client()
+        res = (
+            sb.table("expense_groups")
+            .insert({
+                "name": name,
+                "description": description,
+                "created_by": current_user["id"]
+            })
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "group": {
+                "id": saved.get("id"),
+                "name": saved.get("name", name),
+                "description": saved.get("description", description),
+                "created_by": saved.get("created_by", current_user["id"]),
                 "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
             }
         }
