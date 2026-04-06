@@ -1,10 +1,11 @@
 services:
   - type: web
-    name: anti-gravity-backend
+    name: vpvs-backend
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn api.index:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: SUPABASE_URL
         value: https://eaufubpzxbgfqtutjalo.supabase.co
@@ -14,3 +15,5 @@ services:
         value: sb_secret_NeuEJonW2p8YGGyv1551Yg_Ge-BHrXH
       - key: SUPABASE_STORAGE_BUCKET
         value: images
+      - key: PYTHON_VERSION
+        value: 3.11

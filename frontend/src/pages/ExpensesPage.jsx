@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import apiClient from "../lib/apiClient.js";
+import apiClient from "../lib/universalApiClient.js";
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import apiClient from "../lib/apiClient.js";
+import apiClient from "../lib/universalApiClient.js";
+import PostCard from "../components/PostCard.jsx";
+import "./HomePage.css";
 
 export default function HomePage() {
   const [posts, setPosts] = useState([]);
@@ -117,110 +119,9 @@ export default function HomePage() {
 
       {/* Posts */}
       {!loading && posts.length > 0 && (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-          gap: '2rem'
-        }}>
+        <div className="posts-grid">
           {posts.map((post) => (
-            <div 
-              key={post.id}
-              style={{
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                border: '1px solid var(--border)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              {/* Post Image */}
-              <Link to={`/post/${post.id}`} style={{ textDecoration: 'none' }}>
-                <div style={{ 
-                  width: '100%', 
-                  height: '250px', 
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}>
-                  <img 
-                    src={post.image_url || `https://via.placeholder.com/350x250.png?text=${encodeURIComponent(post.title)}`}
-                    alt={post.title}
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'cover',
-                      transition: 'transform 0.3s ease'
-                    }}
-                    onError={(e) => {
-                      e.target.src = `https://via.placeholder.com/350x250.png?text=${encodeURIComponent(post.title)}`;
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                    }}
-                  />
-                </div>
-              </Link>
-
-              {/* Post Content */}
-              <div style={{ padding: '1.5rem' }}>
-                <Link to={`/post/${post.id}`} style={{ textDecoration: 'none' }}>
-                  <h3 style={{ 
-                    margin: '0 0 1rem 0', 
-                    color: 'var(--text)',
-                    fontSize: '1.2rem',
-                    fontWeight: '600',
-                    lineHeight: '1.4'
-                  }}>
-                    {post.title}
-                  </h3>
-                </Link>
-                
-                <p style={{ 
-                  color: 'var(--muted)', 
-                  margin: '0 0 1rem 0',
-                  fontSize: '0.9rem',
-                  lineHeight: '1.5',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}>
-                  {post.description}
-                </p>
-                
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  fontSize: '0.8rem',
-                  color: 'var(--muted)'
-                }}>
-                  <span>
-                    {post.created_at ? new Date(post.created_at).toLocaleDateString() : ""}
-                  </span>
-                  <Link
-                    to={`/post/${post.id}`}
-                    style={{
-                      color: 'var(--accent)',
-                      textDecoration: 'none',
-                      fontWeight: '500'
-                    }}
-                  >
-                    View Post →
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <PostCard key={post.id} post={post} />
           ))}
         </div>
       )}

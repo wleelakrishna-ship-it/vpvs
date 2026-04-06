@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import apiClient from "../lib/apiClient.js";
+import apiClient from "../lib/universalApiClient.js";
 
 export default function AdminDashboardPage() {
   const [posts, setPosts] = useState([]);

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { directLogin } from "../lib/directSignup.js";
+import apiClient from "../lib/universalApiClient.js";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -25,7 +25,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await directLogin(formData.username, formData.password);
+      const result = await apiClient.login(formData.username, formData.password);
 
       // Store user data and token
       localStorage.setItem("authToken", result.token);

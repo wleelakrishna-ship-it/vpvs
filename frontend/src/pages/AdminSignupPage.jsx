@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { directSignup } from "../lib/directSignup.js";
+import apiClient from "../lib/universalApiClient.js";
 
 export default function AdminSignupPage() {
   const [formData, setFormData] = useState({
@@ -28,7 +28,7 @@ export default function AdminSignupPage() {
     setError("");
 
     try {
-      const result = await directSignup({
+      const result = await apiClient.signup({
         ...formData,
         is_admin: true,
       });

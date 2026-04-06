@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import apiClient from "../lib/apiClient.js";
+import apiClient from "../lib/universalApiClient.js";
 
 export default function PostDetailPage() {
   const { id } = useParams();
