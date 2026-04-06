@@ -377,66 +377,88 @@ class UniversalApiClient {
   }
 
   async getExpenses() {
+    const token = localStorage.getItem("authToken");
     return this.request('/api/expenses', {
       method: 'GET',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async createExpense(expenseData) {
+    const token = localStorage.getItem("authToken");
     return this.request('/api/expenses', {
       method: 'POST',
       body: JSON.stringify(expenseData),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async updateExpense(id, expenseData) {
+    const token = localStorage.getItem("authToken");
     return this.request(`/api/expenses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(expenseData),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async deleteExpense(id) {
+    const token = localStorage.getItem("authToken");
     return this.request(`/api/expenses/${id}`, {
       method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async getExpenseGroups() {
+    const token = localStorage.getItem("authToken");
     return this.request('/api/expense-groups', {
       method: 'GET',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async createExpenseGroup(groupData) {
+    const token = localStorage.getItem("authToken");
     return this.request('/api/expense-groups', {
       method: 'POST',
       body: JSON.stringify(groupData),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async deletePost(postId) {
+    const token = localStorage.getItem("authToken");
     return this.request(`/api/posts/${postId}`, {
       method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async likePost(postId) {
+    const token = localStorage.getItem("authToken");
     return this.request(`/api/posts/${postId}/like`, {
       method: 'POST',
+      body: JSON.stringify({}),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async unlikePost(postId) {
+    const token = localStorage.getItem("authToken");
     return this.request(`/api/posts/${postId}/unlike`, {
       method: 'POST',
+      body: JSON.stringify({}),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
   async addComment(postId, commentData) {
+    const token = localStorage.getItem("authToken");
     return this.request(`/api/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify(commentData),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
