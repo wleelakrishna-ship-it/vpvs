@@ -810,3 +810,106 @@ def create_expense_group(payload: Dict[str, Any], authorization: Optional[str] =
     except Exception as exc:
         return _safe_error(str(exc))
 
+
+# Additional routes for post interactions (frontend compatibility)
+@app.post("/api/posts/{post_id}/like")
+def like_post(post_id: str, authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+        
+        sb = get_admin_client()
+        res = (
+            sb.table("likes")
+            .insert({"post_id": post_id, "username": current_user.get("username", "Anonymous")})
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "like": {
+                "id": saved.get("id"),
+                "post_id": saved.get("post_id", post_id),
+                "username": saved.get("username", current_user.get("username", "Anonymous")),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+@app.post("/api/posts/{post_id}/unlike")
+def unlike_post(post_id: str, authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+        
+        sb = get_admin_client()
+        sb.table("likes").delete().eq("post_id", post_id).eq("username", current_user.get("username", "Anonymous")).execute()
+        return {"ok": True}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+@app.post("/api/posts/{post_id}/comments")
+def add_comment_to_post(post_id: str, payload: Dict[str, Any], authorization: Optional[str] = Header(default=None)):
+    try:
+        current_user = get_current_user(authorization)
+        if not current_user:
+            return _safe_error("Authentication required", 401)
+        
+        username = str(payload.get("username") or current_user.get("username", "Anonymous"))
+        comment = str(payload.get("comment") or "").strip()
+        
+        if not comment:
+            return _safe_error("Missing comment text", 400)
+        if len(comment) > 500:
+            return _safe_error("Comment too long", 400)
+        
+        sb = get_admin_client()
+        res = (
+            sb.table("comments")
+            .insert({"post_id": post_id, "username": username, "comment": comment})
+            .execute()
+        )
+        saved = (res.data or [{}])[0]
+        return {
+            "comment": {
+                "id": saved.get("id"),
+                "post_id": saved.get("post_id", post_id),
+                "username": saved.get("username", username),
+                "comment": saved.get("comment", comment),
+                "created_at": saved.get("created_at", datetime.utcnow().isoformat()),
+            }
+        }
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+@app.get("/api/posts/{post_id}/comments")
+def get_post_comments(post_id: str):
+    try:
+        sb = get_admin_client()
+        res = (
+            sb.table("comments")
+            .select("id,post_id,username,comment,created_at")
+            .eq("post_id", post_id)
+            .order("created_at")
+            .execute()
+        )
+        return {"comments": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+@app.get("/api/posts/{post_id}/likes")
+def get_post_likes(post_id: str):
+    try:
+        sb = get_admin_client()
+        res = (
+            sb.table("likes")
+            .select("id,post_id,username,created_at")
+            .eq("post_id", post_id)
+            .execute()
+        )
+        return {"likes": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+

@@ -59,7 +59,17 @@ class UniversalApiClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const text = await response.text();
+      if (!text) {
+        return {};
+      }
+      
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error in vercelRequest:', parseError, 'Response text:', text);
+        throw new Error(`Invalid JSON response: ${parseError.message}`);
+      }
     } catch (error) {
       throw new Error(`Vercel API error: ${error.message}`);
     }
@@ -85,7 +95,17 @@ class UniversalApiClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const text = await response.text();
+      if (!text) {
+        return {};
+      }
+      
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error in renderRequest:', parseError, 'Response text:', text);
+        throw new Error(`Invalid JSON response: ${parseError.message}`);
+      }
     } catch (error) {
       throw new Error(`Render API error: ${error.message}`);
     }
