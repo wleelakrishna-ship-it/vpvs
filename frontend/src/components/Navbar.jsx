@@ -1,9 +1,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAdminAuth } from "../state/AdminAuthContext.jsx";
 
 export default function Navbar() {
-  const { token, logout } = useAdminAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -14,7 +12,6 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("currentUser");
-    logout();
     navigate("/login");
   };
 
@@ -37,6 +34,13 @@ export default function Navbar() {
           )}
 
           <Link
+            className={location.pathname === "/" ? "active" : ""}
+            to="/"
+          >
+            Posts
+          </Link>
+
+          <Link
             className={location.pathname === "/expenses" ? "active" : ""}
             to="/expenses"
           >
@@ -46,96 +50,45 @@ export default function Navbar() {
           {isLoggedIn ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-                {currentUser.username}
+                {currentUser.username} {currentUser.is_admin ? '(Admin)' : '(User)'}
               </span>
-              <button className="navButton" type="button" onClick={handleLogout}>
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div style={{ position: 'relative' }}>
-              <button
+              <button 
+                className="navButton" 
+                type="button" 
+                onClick={handleLogout}
                 style={{
-                  backgroundColor: 'var(--accent)',
+                  backgroundColor: '#ef4444',
                   color: 'white',
                   border: 'none',
                   padding: '0.5rem 1rem',
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
-                onMouseEnter={(e) => {
-                  const dropdown = e.currentTarget.nextElementSibling;
-                  if (dropdown) dropdown.style.display = 'block';
-                }}
-                onMouseLeave={(e) => {
-                  const dropdown = e.currentTarget.nextElementSibling;
-                  if (dropdown) dropdown.style.display = 'none';
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link 
+                className="navButton" 
+                to="/signup"
+                style={{
+                  backgroundColor: 'var(--accent)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  textDecoration: 'none'
                 }}
               >
                 Sign Up
-              </button>
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                backgroundColor: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'none',
-                minWidth: '150px',
-                zIndex: 1000
-              }} className="signupDropdown"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.display = 'block';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              >
-                <Link
-                  to="/admin-signup"
-                  style={{
-                    display: 'block',
-                    padding: '0.5rem 1rem',
-                    textDecoration: 'none',
-                    color: 'var(--text)',
-                    borderBottom: '1px solid var(--border)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
-                >
-                  Admin Signup
-                </Link>
-                <Link
-                  to="/user-signup"
-                  style={{
-                    display: 'block',
-                    padding: '0.5rem 1rem',
-                    textDecoration: 'none',
-                    color: 'var(--text)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
-                >
-                  User Signup
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {!isLoggedIn && (
-            <Link className="navButton" to="/login">
-              Login
-            </Link>
+              </Link>
+              <Link className="navButton" to="/login">
+                Login
+              </Link>
+            </>
           )}
         </nav>
       </div>

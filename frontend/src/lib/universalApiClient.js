@@ -415,6 +415,31 @@ class UniversalApiClient {
     });
   }
 
+  async deletePost(postId) {
+    return this.request(`/api/posts/${postId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async likePost(postId) {
+    return this.request(`/api/posts/${postId}/like`, {
+      method: 'POST',
+    });
+  }
+
+  async unlikePost(postId) {
+    return this.request(`/api/posts/${postId}/unlike`, {
+      method: 'POST',
+    });
+  }
+
+  async addComment(postId, commentData) {
+    return this.request(`/api/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(commentData),
+    });
+  }
+
 }
 
 // Export singleton instance

@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import apiClient from "../lib/universalApiClient.js";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    is_admin: false,
+    password: "",
+    phone: "",
+    dob: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
 
@@ -25,22 +28,17 @@ export default function SignupPage() {
     setError("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profiles/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      const result = await apiClient.signup({
+        ...formData,
+        is_admin: false, // Always user signup
       });
 
-      const data = await response.json();
+      // Store user data and token
+      localStorage.setItem("authToken", result.token);
+      localStorage.setItem("currentUser", JSON.stringify(result.user));
 
-      if (!response.ok) {
-        throw new Error(data.error || "Signup failed");
-      }
-
-      // Redirect to login page after successful signup
-      navigate("/admin/login");
+      // Redirect to expenses page after successful signup
+      navigate("/expenses");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -51,7 +49,7 @@ export default function SignupPage() {
   return (
     <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
       <div style={{ maxWidth: '400px', padding: '2rem', width: '100%' }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '2rem', color: 'var(--text)' }}>Sign Up</h1>
+        <h1 style={{ textAlign: 'center', marginBottom: '2rem', color: 'var(--text)' }}>User Sign Up</h1>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label htmlFor="username" style={{ fontWeight: '600', color: 'var(--text)' }}>Username</label>
@@ -94,17 +92,64 @@ export default function SignupPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text)' }}>
-              <input
-                type="checkbox"
-                name="is_admin"
-                checked={formData.is_admin}
-                onChange={handleChange}
-                style={{ width: 'auto' }}
-              />
-              Sign up as Admin
-            </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="password" style={{ fontWeight: '600', color: 'var(--text)' }}>Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={{ 
+                padding: '0.75rem', 
+                border: '1px solid rgba(255, 255, 255, 0.1)', 
+                borderRadius: '6px', 
+                background: 'var(--card)', 
+                color: 'var(--text)', 
+                fontSize: '1rem' 
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="phone" style={{ fontWeight: '600', color: 'var(--text)' }}>Phone</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+              style={{ 
+                padding: '0.75rem', 
+                border: '1px solid rgba(255, 255, 255, 0.1)', 
+                borderRadius: '6px', 
+                background: 'var(--card)', 
+                color: 'var(--text)', 
+                fontSize: '1rem' 
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="dob" style={{ fontWeight: '600', color: 'var(--text)' }}>Date of Birth</label>
+            <input
+              type="date"
+              id="dob"
+              name="dob"
+              value={formData.dob}
+              onChange={handleChange}
+              required
+              style={{ 
+                padding: '0.75rem', 
+                border: '1px solid rgba(255, 255, 255, 0.1)', 
+                borderRadius: '6px', 
+                background: 'var(--card)', 
+                color: 'var(--text)', 
+                fontSize: '1rem' 
+              }}
+            />
           </div>
 
           {error && (
@@ -141,7 +186,7 @@ export default function SignupPage() {
         <div style={{ marginTop: '1rem', textAlign: 'center' }}>
           <p style={{ color: 'var(--muted)' }}>
             Already have an account?{" "}
-            <a href="/admin/login" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+            <a href="/login" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
               Log in
             </a>
           </p>

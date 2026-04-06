@@ -1,10 +1,14 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAdminAuth } from "../state/AdminAuthContext.jsx";
 
 export default function RequireAdmin({ children }) {
-  const { token } = useAdminAuth();
-  if (!token) return <Navigate to="/admin/login" replace />;
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+  const authToken = localStorage.getItem("authToken");
+  
+  if (!authToken || !currentUser.is_admin) {
+    return <Navigate to="/login" replace />;
+  }
+  
   return children;
 }
 
