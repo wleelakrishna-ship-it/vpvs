@@ -33,7 +33,7 @@ const hashPassword = (password) => {
 };
 
 // Main handler
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const { httpMethod, path, body, headers } = req;
 
   // Handle CORS preflight
