@@ -363,6 +363,58 @@ class UniversalApiClient {
     });
   }
 
+  async getPosts() {
+    return this.request('/api/posts', {
+      method: 'GET',
+    });
+  }
+
+  async createPost(postData) {
+    return this.request('/api/posts', {
+      method: 'POST',
+      body: JSON.stringify(postData),
+    });
+  }
+
+  async getExpenses() {
+    return this.request('/api/expenses', {
+      method: 'GET',
+    });
+  }
+
+  async createExpense(expenseData) {
+    return this.request('/api/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expenseData),
+    });
+  }
+
+  async updateExpense(id, expenseData) {
+    return this.request(`/api/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(expenseData),
+    });
+  }
+
+  async deleteExpense(id) {
+    return this.request(`/api/expenses/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getExpenseGroups() {
+    return this.request('/api/expense-groups', {
+      method: 'GET',
+    });
+  }
+
+  async createExpenseGroup(groupData) {
+    return this.request('/api/expense-groups', {
+      method: 'POST',
+      body: JSON.stringify(groupData),
+    });
+  }
+
 }
 
 // Export singleton instance
