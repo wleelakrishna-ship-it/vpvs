@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
+    }
+  ],
+  "env": {
+    "SUPABASE_URL": "https://eaufubpzxbgfqtutjalo.supabase.co",
+    "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_NeuEJonW2p8YGGyv1551Yg_Ge-BHrXH"
+  }
+}
