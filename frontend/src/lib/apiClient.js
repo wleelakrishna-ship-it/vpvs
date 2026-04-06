@@ -210,7 +210,8 @@ class ApiClient {
       .insert({
         title,
         description,
-        image_url: image_url || `https://via.placeholder.com/400x300.png?text=${encodeURIComponent(title)}`
+        image_url: image_url || `https://via.placeholder.com/400x300.png?text=${encodeURIComponent(title)}`,
+        image_path: 'placeholder' // Add required image_path field
       })
       .select()
       .single();
