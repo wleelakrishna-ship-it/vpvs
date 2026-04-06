@@ -28,31 +28,37 @@ export default function ExpensesPage() {
     const user = localStorage.getItem("currentUser");
     if (token && user) {
       setCurrentUser(JSON.parse(user));
-      fetchExpenses(token);
-      fetchGroups(token);
+      fetchExpenses();
+      fetchGroups();
     } else {
       // Redirect to login if not authenticated
-      window.location.href = "/admin/login";
+      window.location.href = "/login";
     }
   }, []);
 
-  const fetchExpenses = async (token) => {
+  const fetchExpenses = async () => {
     try {
+      setLoading(true);
       const data = await apiClient.getExpenses();
       setExpenses(data.expenses || []);
     } catch (error) {
       console.error("Failed to fetch expenses:", error);
       setError(error.message || "Failed to fetch expenses");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchGroups = async (token) => {
+  const fetchGroups = async () => {
     try {
+      setLoading(true);
       const data = await apiClient.getExpenseGroups();
       setGroups(data.groups || []);
     } catch (error) {
       console.error("Failed to fetch groups:", error);
       setError(error.message || "Failed to fetch expense groups");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,8 +88,7 @@ export default function ExpensesPage() {
       setEditingExpense(null);
       
       // Refresh expenses
-      const token = localStorage.getItem("authToken");
-      fetchExpenses(token);
+      fetchExpenses();
     } catch (error) {
       console.error("Failed to save expense:", error);
       setError(error.message || "Failed to save expense");
@@ -104,8 +109,8 @@ export default function ExpensesPage() {
       setGroupForm({ name: "", description: "" });
       setShowGroupForm(false);
       
-      const token = localStorage.getItem("authToken");
-      fetchGroups(token);
+      // Refresh groups
+      fetchGroups();
     } catch (error) {
       console.error("Failed to create group:", error);
       setError(error.message || "Failed to create group");
@@ -187,7 +192,59 @@ export default function ExpensesPage() {
   return (
     <div className="page">
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        {/* Loading State */}
+        {loading && !expenses.length && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: '60vh',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid var(--border)',
+              borderTop: '3px solid var(--accent)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            <p style={{ color: 'var(--muted)' }}>Loading expenses...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            color: '#ef4444'
+          }}>
+            <strong>Error:</strong> {error}
+            <button
+              onClick={() => setError("")}
+              style={{
+                marginLeft: '1rem',
+                background: 'none',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '4px',
+                padding: '0.25rem 0.5rem',
+                cursor: 'pointer'
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Main Content - Only show if not loading or has data */}
+        {(!loading || expenses.length > 0) && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h1 style={{ color: 'var(--text)', margin: 0 }}>Expenses Tracker</h1>
           <div style={{ color: 'var(--muted)' }}>
             Logged in as: <strong>{currentUser?.username}</strong> ({isAdmin ? 'Admin' : 'User'})
@@ -622,6 +679,8 @@ export default function ExpensesPage() {
           )}
         </div>
       </div>
+      )}
+    </>
     </div>
   );
 }

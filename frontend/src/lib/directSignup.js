@@ -48,14 +48,17 @@ export async function directSignup(userData) {
       throw new Error(error.message || "Failed to create account");
     }
     
+    // Create simple token
+    const token = `token_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    
     return {
-      profile: {
+      user: {
         id: data.id,
         username: data.username,
         email: data.email,
-        is_admin: data.is_admin,
-        created_at: data.created_at
-      }
+        is_admin: data.is_admin
+      },
+      token
     };
   } catch (error) {
     console.error('Direct signup error:', error);
