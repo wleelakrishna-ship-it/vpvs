@@ -679,7 +679,7 @@ export default function ExpensesPage() {
           )}
         </div>
       </div>
-      )}
+        )}
     </>
     </div>
   );
