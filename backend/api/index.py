@@ -428,8 +428,6 @@ def remove_like(payload: Dict[str, Any]):
         return {"ok": True}
     except Exception as exc:
         return _safe_error(str(exc))
-
-
 @app.get("/api/posts/{post_id}/with-stats")
 def get_post_with_stats(post_id: str):
     try:
