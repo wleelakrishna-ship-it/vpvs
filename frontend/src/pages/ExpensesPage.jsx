@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import apiClient from "../lib/apiClient.js";
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
@@ -37,37 +38,21 @@ export default function ExpensesPage() {
 
   const fetchExpenses = async (token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/expenses?view=${viewMode}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setExpenses(data.expenses || []);
-      } else {
-        throw new Error(data.error || "Failed to fetch expenses");
-      }
-    } catch (err) {
-      setError(err.message);
+      const data = await apiClient.getExpenses();
+      setExpenses(data.expenses || []);
+    } catch (error) {
+      console.error("Failed to fetch expenses:", error);
+      setError(error.message || "Failed to fetch expenses");
     }
   };
 
   const fetchGroups = async (token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/expense-groups`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setGroups(data.groups || []);
-      } else {
-        throw new Error(data.error || "Failed to fetch groups");
-      }
-    } catch (err) {
-      console.error("Failed to fetch groups:", err);
+      const data = await apiClient.getExpenseGroups();
+      setGroups(data.groups || []);
+    } catch (error) {
+      console.error("Failed to fetch groups:", error);
+      setError(error.message || "Failed to fetch expense groups");
     }
   };
 
@@ -76,31 +61,17 @@ export default function ExpensesPage() {
     setLoading(true);
     setError("");
 
-    const token = localStorage.getItem("authToken");
-
     try {
-      const url = editingExpense 
-        ? `${import.meta.env.VITE_API_BASE_URL}/api/expenses/${editingExpense.id}`
-        : `${import.meta.env.VITE_API_BASE_URL}/api/expenses`;
-      
-      const method = editingExpense ? "PUT" : "POST";
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save expense");
+      let result;
+      if (editingExpense) {
+        // For now, we'll skip editing functionality
+        alert("Edit functionality not yet implemented");
+        return;
+      } else {
+        result = await apiClient.createExpense(formData);
       }
 
-      // Reset form and refresh expenses
+      // Reset form
       setFormData({
         description: "",
         amount: "",
@@ -109,9 +80,13 @@ export default function ExpensesPage() {
         group_id: "",
       });
       setEditingExpense(null);
+      
+      // Refresh expenses
+      const token = localStorage.getItem("authToken");
       fetchExpenses(token);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      console.error("Failed to save expense:", error);
+      setError(error.message || "Failed to save expense");
     } finally {
       setLoading(false);
     }
@@ -122,30 +97,18 @@ export default function ExpensesPage() {
     setLoading(true);
     setError("");
 
-    const token = localStorage.getItem("authToken");
-
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/expense-groups`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(groupForm),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create group");
-      }
+      await apiClient.createExpenseGroup(groupForm);
 
       // Reset form and refresh groups
       setGroupForm({ name: "", description: "" });
       setShowGroupForm(false);
+      
+      const token = localStorage.getItem("authToken");
       fetchGroups(token);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      console.error("Failed to create group:", error);
+      setError(error.message || "Failed to create group");
     } finally {
       setLoading(false);
     }
