@@ -37,9 +37,9 @@ class UniversalApiClient {
 
   detectDeployment() {
     const hostname = window.location.hostname;
+    if (hostname.includes('onrender.com')) return 'render';
     if (hostname.includes('vercel.app')) return 'vercel';
     if (hostname.includes('netlify.app')) return 'netlify';
-    if (hostname.includes('onrender.com')) return 'render';
     return 'development';
   }
 
