@@ -212,7 +212,7 @@ def get_comments(postId: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", postId)
-            .order("created_at")
+            .order("created_at", desc=True)
             .execute()
         )
         return {"comments": res.data or []}
@@ -454,7 +454,7 @@ def get_post_with_stats(post_id: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", post_id)
-            .order("created_at")
+            .order("created_at", desc=True)
             .execute()
         )
 
@@ -892,7 +892,7 @@ def get_post_comments(post_id: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", post_id)
-            .order("created_at")
+            .order("created_at", desc=True)
             .execute()
         )
         return {"comments": res.data or []}
