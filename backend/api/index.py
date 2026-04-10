@@ -770,18 +770,13 @@ def delete_expense(expense_id: str, authorization: Optional[str] = Header(defaul
 
 
 @app.get("/api/expense-groups")
-def get_expense_groups(authorization: Optional[str] = Header(default=None)):
+def get_expense_groups():
     try:
-        current_user = get_current_user(authorization)
-        if not current_user:
-            return _safe_error("Authentication required", 401)
-
         sb = get_admin_client()
         res = (
             sb.table("expense_groups")
             .select("*")
-            .eq("created_by", current_user["id"])
-            .order("created_at", {"ascending": False})
+            .order("created_at", desc=True)
             .execute()
         )
         return {"groups": res.data or []}
