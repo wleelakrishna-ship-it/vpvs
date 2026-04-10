@@ -54,7 +54,7 @@ def health() -> Dict[str, Any]:
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "VPVS Backend API",
-        "version": "2.0.0"
+        "version": "2.0.0-1775806643"
     }
 
 
@@ -65,7 +65,7 @@ def root_health() -> Dict[str, Any]:
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "VPVS Backend API",
-        "version": "2.0.0"
+        "version": "2.0.0-1775806643"
     }
 
 
