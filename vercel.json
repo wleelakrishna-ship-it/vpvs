@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://vpvs-backend.onrender.com/api/$1"
+      "dest": "https://vpvs-1.onrender.com/api/$1"
     }
   ],
   "env": {
@@ -20,6 +20,6 @@
     "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_NeuEJonW2p8YGGyv1551Yg_Ge-BHrXH",
     "VITE_SUPABASE_URL": "https://eaufubpzxbgfqtutjalo.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "sb_publishable_51j7QV7dhTacsOpJkfVceA_oFU31WPJ",
-    "VITE_API_BASE_URL": "https://vpvs-backend.onrender.com"
+    "VITE_API_BASE_URL": "https://vpvs-1.onrender.com"
   }
 }
