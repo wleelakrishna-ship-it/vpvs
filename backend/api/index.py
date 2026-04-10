@@ -96,7 +96,7 @@ def get_posts():
         res = (
             sb.table("posts")
             .select("id,title,description,image_url,created_at")
-            .order("created_at", desc=True)
+            .order("created_at", {"ascending": False})
             .execute()
         )
         return {"posts": res.data or []}
@@ -212,7 +212,7 @@ def get_comments(postId: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", postId)
-            .order("created_at", desc=True)
+            .order("created_at", {"ascending": False})
             .execute()
         )
         return {"comments": res.data or []}
@@ -454,7 +454,7 @@ def get_post_with_stats(post_id: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", post_id)
-            .order("created_at", desc=True)
+            .order("created_at", {"ascending": False})
             .execute()
         )
 
@@ -766,7 +766,7 @@ def get_expense_groups(authorization: Optional[str] = Header(default=None)):
             sb.table("expense_groups")
             .select("*")
             .eq("created_by", current_user["id"])
-            .order("created_at", desc=True)
+            .order("created_at", {"ascending": False})
             .execute()
         )
         return {"groups": res.data or []}
@@ -892,7 +892,7 @@ def get_post_comments(post_id: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", post_id)
-            .order("created_at", desc=True)
+            .order("created_at", {"ascending": False})
             .execute()
         )
         return {"comments": res.data or []}
