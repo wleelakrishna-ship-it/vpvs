@@ -154,6 +154,21 @@ def get_comments(postId: str):
         return _safe_error(str(exc))
 
 
+@app.get("/api/comments")
+def get_all_comments():
+    try:
+        sb = get_admin_client()
+        res = (
+            sb.table("comments")
+            .select("id,post_id,username,comment,created_at")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return {"comments": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
 @app.post("/api/comments")
 def add_comment(payload: Dict[str, Any]):
     try:
@@ -233,6 +248,21 @@ def get_post_comments(post_id: str):
             .execute()
         )
         return {"comments": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
+@app.get("/api/likes")
+def get_all_likes():
+    try:
+        sb = get_admin_client()
+        res = (
+            sb.table("likes")
+            .select("id,post_id,username,created_at")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return {"likes": res.data or []}
     except Exception as exc:
         return _safe_error(str(exc))
 
@@ -333,6 +363,16 @@ def create_expense_group(payload: Dict[str, Any]):
 
 
 # Profiles/Signup endpoints (no auth)
+@app.get("/api/profiles")
+def get_profiles():
+    try:
+        sb = get_admin_client()
+        res = sb.table("profiles").select("*").execute()
+        return {"profiles": res.data or []}
+    except Exception as exc:
+        return _safe_error(str(exc))
+
+
 @app.post("/api/profiles/signup")
 def signup(payload: Dict[str, Any]):
     try:
