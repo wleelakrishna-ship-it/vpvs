@@ -85,8 +85,23 @@ def _safe_error(message: str, status_code: int = 500) -> JSONResponse:
 
 
 @app.get("/api/health")
-def health() -> Dict[str, str]:
-    return {"ok": "true"}
+def health() -> Dict[str, Any]:
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "VPVS Backend API",
+        "version": "2.0.0"
+    }
+
+
+@app.get("/health")
+def root_health() -> Dict[str, Any]:
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "VPVS Backend API",
+        "version": "2.0.0"
+    }
 
 
 @app.get("/api/posts")
@@ -892,7 +907,7 @@ def get_post_comments(post_id: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", post_id)
-            .order("created_at", {"ascending": False})
+            .order("created_at", desc=True)
             .execute()
         )
         return {"comments": res.data or []}
