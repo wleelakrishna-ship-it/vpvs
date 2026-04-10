@@ -411,32 +411,50 @@ def simple_signup(payload: Dict[str, Any]):
 @app.post("/api/profiles/signup")
 def signup(payload: Dict[str, Any]):
     try:
+        # Validate required fields
+        username = payload.get("username")
+        email = payload.get("email")
+        
+        if not username or not email:
+            return _safe_error("Username and email are required", 400)
+        
         sb = get_admin_client()
+        
+        # Check if user already exists
+        existing_user = sb.table("profiles").select("*").eq("username", username).execute()
+        if existing_user.data:
+            return _safe_error("Username already exists", 400)
+        
+        existing_email = sb.table("profiles").select("*").eq("email", email).execute()
+        if existing_email.data:
+            return _safe_error("Email already exists", 400)
+        
+        # Create profile with all required fields
         profile_data = {
             "id": str(uuid4()),
-            "username": payload.get("username"),
-            "email": payload.get("email"),
-            "phone": payload.get("phone"),
-            "dob": payload.get("dob"),
+            "username": username,
+            "email": email,
+            "phone": payload.get("phone", "0000000000"),
+            "dob": payload.get("dob", "2000-01-01"),
             "is_admin": payload.get("is_admin", False),
+            "password": "defaultpassword123",  # Add password to satisfy Supabase
             "created_at": datetime.utcnow().isoformat()
         }
         
-        # Add a default password to satisfy Supabase validation
-        try:
-            res = sb.table("profiles").insert(profile_data).execute()
-            return {"profile": res.data[0]}
-        except Exception as db_error:
-            # If Supabase validation fails, try with password
-            if "password" in str(db_error):
-                profile_data["password"] = "defaultpassword123"
-                res = sb.table("profiles").insert(profile_data).execute()
-                return {"profile": res.data[0]}
-            else:
-                raise db_error
-                
+        res = sb.table("profiles").insert(profile_data).execute()
+        if res.data:
+            return {"profile": res.data[0], "status": "created"}
+        else:
+            return _safe_error("Failed to create profile", 500)
+            
     except Exception as exc:
-        return _safe_error(str(exc))
+        error_msg = str(exc)
+        if "password" in error_msg:
+            return _safe_error("Password validation failed", 400)
+        elif "duplicate" in error_msg.lower():
+            return _safe_error("User already exists", 400)
+        else:
+            return _safe_error(f"Signup failed: {error_msg}", 500)
 
 
 @app.get("/api/profiles")
@@ -473,7 +491,7 @@ def login(payload: Dict[str, Any]):
         user = res.data[0]
         return {"user": user, "token": "mock-token-no-auth"}
     except Exception as exc:
-        return _safe_error(str(exc))
+        return _safe_error(f"Login failed: {str(exc)}", 500)
 
 
 if __name__ == "__main__":
