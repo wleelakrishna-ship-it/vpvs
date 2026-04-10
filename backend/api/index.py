@@ -11,7 +11,7 @@ from supabase import Client, create_client
 
 load_dotenv()
 
-app = FastAPI(title="VPVS API")
+app = FastAPI(title="VPVS API - Deployed 1775792607")
 
 app.add_middleware(
     CORSMiddleware,
