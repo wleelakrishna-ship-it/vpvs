@@ -111,7 +111,7 @@ def get_posts():
         res = (
             sb.table("posts")
             .select("id,title,description,image_url,created_at")
-            .order("created_at", {"ascending": False})
+            .order("created_at", desc=True)
             .execute()
         )
         return {"posts": res.data or []}
@@ -227,7 +227,7 @@ def get_comments(postId: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", postId)
-            .order("created_at", {"ascending": False})
+            .order("created_at", desc=True)
             .execute()
         )
         return {"comments": res.data or []}
@@ -469,7 +469,7 @@ def get_post_with_stats(post_id: str):
             sb.table("comments")
             .select("id,post_id,username,comment,created_at")
             .eq("post_id", post_id)
-            .order("created_at", {"ascending": False})
+            .order("created_at", desc=True)
             .execute()
         )
 
@@ -912,14 +912,21 @@ def get_post_comments(post_id: str):
 @app.get("/api/posts/{post_id}/likes")
 def get_post_likes(post_id: str):
     try:
+        # Validate UUID format
+        from uuid import UUID
+        try:
+            UUID(post_id)  # Will raise ValueError if invalid
+        except ValueError:
+            return _safe_error("Invalid post ID format", 400)
+        
         sb = get_admin_client()
         res = (
             sb.table("likes")
             .select("id,post_id,username,created_at")
             .eq("post_id", post_id)
+            .order("created_at", desc=True)
             .execute()
         )
         return {"likes": res.data or []}
     except Exception as exc:
         return _safe_error(str(exc))
-
