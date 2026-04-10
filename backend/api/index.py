@@ -9,7 +9,20 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Header, Depends
+import jwt
+
+# --- Auth helpers ---
+def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    token = authorization.split(" ", 1)[1]
+    try:
+        # NOTE: Replace 'your-secret-key' with your JWT secret or use Supabase JWT verification
+        payload = jwt.decode(token, os.getenv("JWT_SECRET", "your-secret-key"), algorithms=["HS256"])
+        return payload
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid token")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from supabase import Client, create_client
@@ -289,31 +302,38 @@ def get_post_likes(post_id: str):
 
 # Expenses endpoints (no auth)
 @app.get("/api/expenses")
-def get_expenses():
+def get_expenses(current_user: dict = Depends(get_current_user)):
     try:
         sb = get_admin_client()
-        res = (
-            sb.table("expenses")
-            .select("*")
-            .order("created_at", desc=True)
-            .execute()
-        )
+        user_id = current_user.get("sub")
+        is_admin = current_user.get("is_admin", False)
+        # Admins see all, users see own and group expenses
+        if is_admin:
+            res = sb.table("expenses").select("*").order("created_at", desc=True).execute()
+        else:
+            # Get group_ids user belongs to (assume group membership logic or created_by)
+            group_res = sb.table("expense_groups").select("id").eq("created_by", user_id).execute()
+            group_ids = [g["id"] for g in (group_res.data or [])]
+            res = sb.table("expenses").select("*") \
+                .or_(f"user_id.eq.{user_id},group_id.in.({','.join(group_ids)})") \
+                .order("created_at", desc=True).execute()
         return res.data or []
     except Exception as exc:
         return _safe_error(str(exc))
 
 
 @app.post("/api/expenses")
-def create_expense(payload: Dict[str, Any]):
+def create_expense(payload: Dict[str, Any], current_user: dict = Depends(get_current_user)):
     try:
         sb = get_admin_client()
+        user_id = current_user.get("sub")
         expense_data = {
             "id": str(uuid4()),
             "description": payload.get("description"),
             "amount": payload.get("amount"),
             "type": payload.get("type", "expense"),
             "date": payload.get("date"),
-            "user_id": "system",  # No auth
+            "user_id": user_id,
             "group_id": payload.get("group_id"),
             "created_at": datetime.utcnow().isoformat()
         }
@@ -324,11 +344,27 @@ def create_expense(payload: Dict[str, Any]):
 
 
 @app.delete("/api/expenses/{expense_id}")
-def delete_expense(expense_id: str):
+def delete_expense(expense_id: str, current_user: dict = Depends(get_current_user)):
     try:
         sb = get_admin_client()
-        sb.table("expenses").delete().eq("id", expense_id).execute()
-        return {"ok": True}
+        user_id = current_user.get("sub")
+        is_admin = current_user.get("is_admin", False)
+        # Fetch expense
+        res = sb.table("expenses").select("*").eq("id", expense_id).execute()
+        if not res.data:
+            return _safe_error("Expense not found", 404)
+        expense = res.data[0]
+        # Admin can delete any, user can delete own, admin can delete group event
+        if is_admin or expense["user_id"] == user_id:
+            sb.table("expenses").delete().eq("id", expense_id).execute()
+            return {"ok": True}
+        # If group event, check if user is admin of group
+        if expense["group_id"]:
+            group_res = sb.table("expense_groups").select("*").eq("id", expense["group_id"]).execute()
+            if group_res.data and group_res.data[0]["created_by"] == user_id and is_admin:
+                sb.table("expenses").delete().eq("id", expense_id).execute()
+                return {"ok": True}
+        return _safe_error("Not authorized to delete this expense", 403)
     except Exception as exc:
         return _safe_error(str(exc))
 
@@ -350,14 +386,15 @@ def get_expense_groups():
 
 
 @app.post("/api/expense-groups")
-def create_expense_group(payload: Dict[str, Any]):
+def create_expense_group(payload: Dict[str, Any], current_user: dict = Depends(get_current_user)):
     try:
         sb = get_admin_client()
+        user_id = current_user.get("sub")
         group_data = {
             "id": str(uuid4()),
             "name": payload.get("name"),
             "description": payload.get("description"),
-            "created_by": "system",  # No auth
+            "created_by": user_id,
             "created_at": datetime.utcnow().isoformat()
         }
         res = sb.table("expense_groups").insert(group_data).execute()
