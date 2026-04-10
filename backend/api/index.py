@@ -48,6 +48,7 @@ def _safe_error(message: str, status_code: int = 500) -> JSONResponse:
 
 # Health endpoints
 @app.get("/api/health")
+@app.head("/api/health")
 def health() -> Dict[str, Any]:
     return {
         "status": "healthy",
@@ -58,6 +59,7 @@ def health() -> Dict[str, Any]:
 
 
 @app.get("/health")
+@app.head("/health")
 def root_health() -> Dict[str, Any]:
     return {
         "status": "healthy",
@@ -69,6 +71,8 @@ def root_health() -> Dict[str, Any]:
 
 @app.get("/")
 @app.get("/api")
+@app.head("/")
+@app.head("/api")
 def index() -> Dict[str, Any]:
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
